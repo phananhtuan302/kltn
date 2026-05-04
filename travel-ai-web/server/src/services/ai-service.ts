@@ -183,16 +183,16 @@ export class AiService {
   }
 
   private buildSuggestionPrompt(suggestions: LocationRecord[]): string {
-    return `Du lieu goi y uu tien hien tai: ${JSON.stringify(
-      suggestions.map((item) => ({
-        name: item.name,
-        categoryName: item.categoryName,
-        address: item.address,
-        rating: item.rating,
-        totalReviews: item.totalReviews,
-        priceLabel: item.priceLabel
-      }))
-    )}`;
+    const suggestionsData = suggestions.map((item) => ({
+      name: item.name,
+      categoryName: item.categoryName,
+      address: item.address,
+      rating: item.rating,
+      totalReviews: item.totalReviews,
+      priceLabel: item.priceLabel
+    }));
+
+    return `DANH SACH DIA DIEM CO TRONG HE THONG (CHI GOI Y CAC DIA DIEM NAY):\n${JSON.stringify(suggestionsData, null, 2)}\n\nYEU CAU TRONG VAL: \n- CHI GOI Y va goi ten cac dia diem co trong danh sach tren\n- Neu khach hoi ve dia diem khong co trong he thong, hay thong bao "Dia diem nay hien chua co trong co so du lieu cua toi"\n- Tat ca cac goi y phai LAY TU danh sach duoc cung cap`;
   }
 
   private buildConversationTranscript(messages: ChatMessageInput[]): string {

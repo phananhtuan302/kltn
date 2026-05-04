@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import csv from "csv-parse/sync";
+import { parse } from "csv-parse/sync";
 
 dotenv.config();
 
@@ -13,14 +13,24 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://phananhtuan302_db_user
 const DB_NAME = "DBWebsite";
 const COLLECTION_NAME = "diadiem";
 
+function extractDistrict(address) {
+    if (!address) return '';
+    const matches = address.match(/Quận\s+(\d+|[Á-ỹ]+)|Huyện\s+([Á-ỹ\s]+)|Thị xã\s+([Á-ỹ\s]+)/i);
+    if (matches) {
+        return matches[1] || matches[2] || matches[3] || '';
+    }
+    return '';
+}
+
 function parseLocationFromCsv(row, index) {
-    const categoryCode = row.danh_muc ? .toLowerCase().replace(/\s+/g, '-') || 'unknown';
+    const categoryName = row.danh_muc || '';
+    const categoryCode = categoryName.toLowerCase().replace(/\s+/g, '-') || 'unknown';
 
     return {
         id: index + 1,
         name: row.tên || '',
         categoryCode: categoryCode,
-        categoryName: row.danh_muc || '',
+        categoryName: categoryName,
         address: row.địa_chỉ || '',
         district: extractDistrict(row.địa_chỉ),
         description: row.mô_tả || '',
@@ -36,15 +46,6 @@ function parseLocationFromCsv(row, index) {
         avgPriceVnd: parseFloat(row.giá) || 0,
         status: 'active'
     };
-}
-
-function extractDistrict(address) {
-    if (!address) return '';
-    const matches = address.match(/Quận\s+(\d+|[Á-ỹ]+)|Huyện\s+([Á-ỹ\s]+)|Thị xã\s+([Á-ỹ\s]+)/i);
-    if (matches) {
-        return matches[1] || matches[2] || matches[3] || '';
-    }
-    return '';
 }
 
 async function importLocations() {
@@ -63,7 +64,7 @@ async function importLocations() {
         console.log("📖 Reading cleaned_data_updated_2.csv...");
         const dataPath = path.join(__dirname, "../cleaned_data_updated_2.csv");
         const csvData = await fs.readFile(dataPath, "utf-8");
-        const records = csv.parse(csvData, {
+        const records = parse(csvData, {
             columns: true,
             skip_empty_lines: true
         });
@@ -88,25 +89,16 @@ async function importLocations() {
         const result = await collection.insertMany(locations);
         console.log(`✓ Successfully imported ${result.insertedCount} locations!`);
 
-        // Create indexes
-        await collection.createIndex({ id: 1 });
+        // Create indexes for better query performance
+        await collection.createIndex({ name: 1 });
         await collection.createIndex({ categoryCode: 1 });
         await collection.createIndex({ featured: 1 });
-        await collection.createIndex({ rating: -1 });
-        await collection.createIndex({ name: "text", address: "text" });
         console.log(`✓ Created database indexes`);
 
-        // Show summary
-        const count = await collection.countDocuments();
-        console.log(`\n📊 Summary:`);
-        console.log(`   Database: ${DB_NAME}`);
-        console.log(`   Collection: ${COLLECTION_NAME}`);
-        console.log(`   Total documents: ${count}`);
-
-        await mongoose.disconnect();
-        console.log("\n✅ Import completed successfully!");
+        await mongoose.connection.close();
+        console.log("✓ Connection closed");
     } catch (error) {
-        console.error("❌ Import failed:", error.message);
+        console.error("❌ Error:", error.message);
         process.exit(1);
     }
 }
