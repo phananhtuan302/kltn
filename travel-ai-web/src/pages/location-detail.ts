@@ -1,6 +1,8 @@
 import { apiAddItineraryItem, apiRemoveItineraryItem, fetchLocationById } from "../lib/api";
 import { navigate } from "../lib/router";
 import { getFavoriteLocationIds, getState, toggleFavoriteLocationId } from "../lib/state";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 function starsHtml(rating: number): string {
   const full = Math.round(rating);
@@ -44,6 +46,7 @@ export async function renderLocationDetailPage(container: HTMLElement): Promise<
           <span class="detail-cat">${item.categoryName}</span>
           <h1>${item.name}</h1>
           <p class="detail-address">📍 ${item.address}</p>
+          <div id="map" style="height: 320px; margin: 12px 0; border-radius:8px; overflow:hidden"></div>
           <div class="detail-rating">${starsHtml(item.rating)} <small>${item.rating.toFixed(1)} (${item.totalReviews} đánh giá)</small></div>
           <p class="detail-desc">${item.description ?? "Chưa có mô tả chi tiết."}</p>
           <div class="detail-actions">
@@ -63,6 +66,37 @@ export async function renderLocationDetailPage(container: HTMLElement): Promise<
       const ids = toggleFavoriteLocationId(item.id);
       favoriteBtn.textContent = ids.includes(item.id) ? "♥ Bỏ yêu thích" : "♡ Yêu thích";
     });
+
+    // Initialize Leaflet map if coordinates are available
+    try {
+      const lat = Number(item.latitude);
+      const lon = Number(item.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        // Fix default marker icon paths (use CDN images)
+        L.Icon.Default.mergeOptions({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+        });
+
+        const map = L.map(root.querySelector('#map') as HTMLElement).setView([lat, lon], 15);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        L.marker([lat, lon]).addTo(map)
+          .bindPopup(`${item.name}<br>${item.address}`);
+      } else {
+        // hide map container if no coords
+        const mapEl = root.querySelector('#map') as HTMLElement | null;
+        if (mapEl) mapEl.style.display = 'none';
+      }
+    } catch (e) {
+      // ignore map errors
+      const mapEl = root.querySelector('#map') as HTMLElement | null;
+      if (mapEl) mapEl.style.display = 'none';
+    }
 
     root.querySelector("#detail-itinerary")?.addEventListener("click", () => {
       if (!getState().token) {

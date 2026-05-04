@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import csv from "csv-parse/sync";
+import { parse } from "csv-parse/sync";
 
 dotenv.config();
 
@@ -14,13 +14,14 @@ const DB_NAME = "DBWebsite";
 const COLLECTION_NAME = "diadiem";
 
 function parseLocationFromCsv(row, index) {
-    const categoryCode = row.danh_muc ? .toLowerCase().replace(/\s+/g, '-') || 'unknown';
+    const categoryName = row.danh_muc || '';
+    const categoryCode = categoryName.toLowerCase().replace(/\s+/g, '-') || 'unknown';
 
     return {
         id: index + 1,
         name: row.tên || '',
         categoryCode: categoryCode,
-        categoryName: row.danh_muc || '',
+        categoryName: categoryName,
         address: row.địa_chỉ || '',
         district: extractDistrict(row.địa_chỉ),
         description: row.mô_tả || '',
@@ -63,7 +64,7 @@ async function importLocations() {
         console.log("📖 Reading cleaned_data_updated_2.csv...");
         const dataPath = path.join(__dirname, "../cleaned_data_updated_2.csv");
         const csvData = await fs.readFile(dataPath, "utf-8");
-        const records = csv.parse(csvData, {
+        const records = parse(csvData, {
             columns: true,
             skip_empty_lines: true
         });

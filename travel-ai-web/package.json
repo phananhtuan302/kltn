@@ -11,7 +11,8 @@
         "build:client": "vite build",
         "build:server": "tsc -p server/tsconfig.json",
         "preview": "vite preview",
-        "start": "node dist-server/index.js"
+        "start": "node dist-server/index.js",
+        "import": "node scripts/import-locations.mjs"
     },
     "dependencies": {
         "@google/genai": "^1.45.0",
@@ -21,6 +22,7 @@
         "dotenv": "^16.4.7",
         "express": "^4.21.2",
         "jsonwebtoken": "^9.0.2",
+        "leaflet": "^1.9.4",
         "mongoose": "^8.0.0",
         "mssql": "^11.0.1",
         "openai": "^4.86.2",
